@@ -11,7 +11,7 @@ import (
 func ConnectRedis(config RedisConfig) (redisClient *redis.Client, err error) {
 	ctx := context.Background()
 	opts := &redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", config.Host, config.Password),
+		Addr:     fmt.Sprintf("%s:%s", config.Host, config.Port),
 		Password: config.Password,
 		DB:       0,
 	}
