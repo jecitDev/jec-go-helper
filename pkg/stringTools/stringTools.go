@@ -41,7 +41,7 @@ func ParseStringToBoolPtr(s string) *bool {
 	return &result
 }
 
-func StructToString(s interface{}) string {
+func StructToString(s interface{}, delimiter string) string {
 	v := reflect.ValueOf(s)
 	t := v.Type()
 
@@ -66,7 +66,7 @@ func StructToString(s interface{}) string {
 
 		// Append to string builder
 		if sb.Len() > 0 {
-			sb.WriteString("|")
+			sb.WriteString(delimiter)
 		}
 		sb.WriteString(fmt.Sprintf("%s:%v", tagName, value))
 	}
