@@ -18,3 +18,21 @@ func RightValueWithFormat(format string, input string, length int) string {
 
 	return strings.Repeat(format, length-len(input)) + input
 }
+
+func ParseStringToBoolPtr(s string) *bool {
+	if strings.TrimSpace(s) == "" {
+		return nil
+	}
+
+	var result bool
+	if s == "true" {
+		result = true
+	} else if s == "false" {
+		result = false
+	} else {
+		// Handle invalid input string that is neither "true" nor "false".
+		// This could be an error return depending on your needs.
+		return nil
+	}
+	return &result
+}
