@@ -2,17 +2,20 @@ package slicetools
 
 import "sort"
 
-func DeleteElement(slice []interface{}, index int) interface{} {
-	return append(slice[:index], slice[index+1:]...)
+func DeleteElement(slice interface{}, index int) interface{} {
+	sliceSlice := slice.([]interface{})
+	return append(sliceSlice[:index], sliceSlice[index+1:]...)
 }
 
-func DeleteElements(slice []interface{}, indices []int) interface{} {
+func DeleteElements(slice interface{}, indices []int) interface{} {
 	// Sort indices in descending order
 	sort.Sort(sort.Reverse(sort.IntSlice(indices)))
 
+	sliceSlice := slice.([]interface{})
+
 	for _, index := range indices {
-		slice = append(slice[:index], slice[index+1:]...)
+		sliceSlice = append(sliceSlice[:index], sliceSlice[index+1:]...)
 	}
 
-	return slice
+	return sliceSlice
 }
