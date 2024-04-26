@@ -57,11 +57,23 @@ func StructToString(s interface{}, delimiter string) string {
 			continue
 		}
 
-		value := v.Field(i).Interface()
+		// value := v.Field(i).Interface()
 
-		// Special handling for *bool to avoid dereferencing nil pointers
-		if v.Field(i).Kind() == reflect.Ptr && v.Field(i).IsNil() {
-			continue // Skip nil pointers, or handle them differently if needed
+		// // Special handling for *bool to avoid dereferencing nil pointers
+		// if v.Field(i).Kind() == reflect.Ptr && v.Field(i).IsNil() {
+		// 	continue // Skip nil pointers, or handle them differently if needed
+		// }
+
+		valueField := v.Field(i)
+		var value interface{}
+
+		if valueField.Kind() == reflect.Ptr {
+			if valueField.IsNil() {
+				continue // Skip nil pointers, or handle them differently if needed
+			}
+			value = valueField.Elem().Interface() // Dereference the pointer to get the value
+		} else {
+			value = valueField.Interface()
 		}
 
 		// Append to string builder
