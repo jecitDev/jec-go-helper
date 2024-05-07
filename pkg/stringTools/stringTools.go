@@ -3,6 +3,7 @@ package stringtools
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -39,6 +40,66 @@ func ParseStringToBoolPtr(s string) *bool {
 		return nil
 	}
 	return &result
+}
+
+// Parses a string to an int pointer.
+func ParseStringToIntPtr(strContent string) *int {
+	var iResult int
+
+	if strings.TrimSpace(strContent) == "" {
+		return nil
+	}
+
+	iVal, _ := strconv.ParseInt(strContent, 10, 32)
+	if iVal >= 0 {
+		iResult = int(iVal)
+	} else if iVal == -99 {
+		iResult = int(iVal)
+	} else {
+		return nil
+	}
+
+	return &iResult
+}
+
+// Parses a string to an int32 pointer.
+func ParseStringToInt32Ptr(strContent string) *int32 {
+	var iResult int32
+
+	if strings.TrimSpace(strContent) == "" {
+		return nil
+	}
+
+	iVal, _ := strconv.ParseInt(strContent, 10, 32)
+	if iVal >= 0 {
+		iResult = int32(iVal)
+	} else if iVal == -99 {
+		iResult = int32(iVal)
+	} else {
+		return nil
+	}
+
+	return &iResult
+}
+
+// Parses a string to an int64 pointer.
+func ParseStringToInt64Ptr(strContent string) *int64 {
+	var iResult int64
+
+	if strings.TrimSpace(strContent) == "" {
+		return nil
+	}
+
+	iVal, _ := strconv.ParseInt(strContent, 10, 32)
+	if iVal >= 0 {
+		iResult = iVal
+	} else if iVal == -99 {
+		iResult = iVal
+	} else {
+		return nil
+	}
+
+	return &iResult
 }
 
 func StructToString(s interface{}, delimiter string) string {
