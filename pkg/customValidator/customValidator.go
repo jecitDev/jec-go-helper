@@ -51,9 +51,11 @@ func validateDateTimeIso8601(fl validator.FieldLevel) bool {
 
 	if len(datestr) > 0 {
 		return ISO8601DateRegex.MatchString(datestr)
+	} else {
+		return false
 	}
 
-	return true
+	// return true
 }
 
 func validateDateRange(fl validator.FieldLevel) bool {
@@ -72,19 +74,19 @@ func GrpcErrorHandler() grpc.UnaryServerInterceptor {
 			for _, err := range castedObject {
 				switch err.Tag() {
 				case "required":
-					message = append(message, fmt.Sprintf("%s is required",
+					message = append(message, fmt.Sprintf("validation_request|required|%s",
 						err.Field()))
 				case "email":
-					message = append(message, fmt.Sprintf("%s is not valid email",
+					message = append(message, fmt.Sprintf("validation_request|not_email|%s",
 						err.Field()))
 				case "gte":
-					message = append(message, fmt.Sprintf("%s value must be greater than %s",
+					message = append(message, fmt.Sprintf("validation_request|gte|%s|%s",
 						err.Field(), err.Param()))
 				case "lte":
-					message = append(message, fmt.Sprintf("%s value must be lower than %s",
+					message = append(message, fmt.Sprintf("validation_request|lte|%s|%s",
 						err.Field(), err.Param()))
 				case "ISO8601date":
-					message = append(message, fmt.Sprintf("%s value must be ISO8601 date (YYYY-MM-DDTHH:mm:ssZ)",
+					message = append(message, fmt.Sprintf("validation_request|not_iso8601date|%s",
 						err.Field()))
 				}
 			}

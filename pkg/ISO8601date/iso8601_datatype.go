@@ -2,7 +2,7 @@ package iso8601date
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"regexp"
 )
 
@@ -22,7 +22,7 @@ func Parse(s string) (ISO8601date, error) {
 	if ISO8601DateRegex.MatchString(s) {
 		return ISO8601date{s}, nil
 	}
-	return ISO8601date{}, errors.New("invalid iso8601 date format")
+	return ISO8601date{}, fmt.Errorf("validation_request|not_iso8601date|%s", "Data")
 
 }
 func (c ISO8601date) MarshalJSON() ([]byte, error) {
