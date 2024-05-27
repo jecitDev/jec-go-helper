@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -52,10 +53,32 @@ func validateDateTimeIso8601(fl validator.FieldLevel) bool {
 	if len(datestr) > 0 {
 		return ISO8601DateRegex.MatchString(datestr)
 	} else {
-		return false
-	}
 
+		structField, found := fl.Parent().Type().FieldByName(fl.FieldName())
+		if !found {
+			return false
+		}
+		required := false
+		fieldTag := structField.Tag.Get("validate")
+		if fieldTag != "" {
+			required = containsRequiredTag(fieldTag)
+		}
+		if required {
+			return false
+		}
+		return true
+	}
 	// return true
+}
+
+func containsRequiredTag(tag string) bool {
+	tags := strings.Split(tag, ",")
+	for _, t := range tags {
+		if t == "required" {
+			return true
+		}
+	}
+	return false
 }
 
 func validateDateRange(fl validator.FieldLevel) bool {
