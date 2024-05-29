@@ -111,6 +111,11 @@ func GrpcErrorHandler() grpc.UnaryServerInterceptor {
 				case "ISO8601date":
 					message = append(message, fmt.Sprintf("validation_request|not_iso8601date|%s",
 						err.Field()))
+				case "uuid4_rfc4122":
+					message = append(
+						message,
+						fmt.Sprintf("validation_request|not_uuid4|%s", err.Field()),
+					)
 				}
 			}
 		}
