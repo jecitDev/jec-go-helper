@@ -30,3 +30,18 @@ func ConvertTimeToLocal(t time.Time, offset time.Duration) time.Time {
 	loca := time.FixedZone("UTC+8", int((offset * time.Hour).Seconds()))
 	return t.In(loca)
 }
+
+// Helper function to check if a boolean is true or false.
+func CheckBoolean(u *bool) bool {
+	bIsActive := false
+
+	if u == nil {
+		bIsActive = false
+	} else if !(*u) {
+		bIsActive = false
+	} else {
+		bIsActive = true
+	}
+
+	return bIsActive
+}
