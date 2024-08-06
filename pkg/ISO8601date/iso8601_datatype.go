@@ -26,6 +26,9 @@ func Parse(s string) (ISO8601date, error) {
 
 }
 func (c ISO8601date) MarshalJSON() ([]byte, error) {
+	if c.datetime == "" {
+		return json.Marshal(nil)
+	}
 	return json.Marshal(c.datetime)
 }
 
