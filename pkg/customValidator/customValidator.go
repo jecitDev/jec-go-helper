@@ -116,6 +116,9 @@ func GrpcErrorHandler() grpc.UnaryServerInterceptor {
 						message,
 						fmt.Sprintf("validation_request|not_uuid4|%s", err.Field()),
 					)
+				case "timeperiod":
+					message = append(message, fmt.Sprintf("%s is required",
+						err.Field()))
 				}
 			}
 		}
