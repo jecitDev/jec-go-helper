@@ -2,8 +2,8 @@ package encryptor
 
 import "golang.org/x/crypto/bcrypt"
 
-func HashingPassword(password string) (string, error) {
-	hashedByte, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+func HashingPassword(password string,cost int) (string, error) {
+	hashedByte, err := bcrypt.GenerateFromPassword([]byte(password), cost)
 	if err != nil {
 		return "", err
 	}
