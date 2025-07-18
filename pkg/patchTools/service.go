@@ -1,6 +1,7 @@
 package patchtools
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -81,7 +82,13 @@ func PopulateStruct(dataSlice []Data, reg interface{}) error {
 				} else {
 					return fmt.Errorf("unsupported struct type for field %s", data.Field)
 				}
-
+			case reflect.Slice:
+				if fieldVal.Type() == reflect.TypeOf((*json.RawMessage)(nil)) {
+					rawJSON := json.RawMessage(data.Value)
+					fieldVal.Set(reflect.ValueOf(&rawJSON))
+				} else {
+					return fmt.Errorf("unsupported slice type for field %s", data.Field)
+				}
 			default:
 				return fmt.Errorf("unsupported field type: %s", elemType.Kind())
 			}
