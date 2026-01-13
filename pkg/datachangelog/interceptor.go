@@ -117,6 +117,7 @@ func NewAuditInterceptor(cfg *InterceptorConfig) grpc.UnaryServerInterceptor {
 		if !shouldLogMethod(cfg, domain, methodName) {
 			return handler(ctx, req)
 		}
+		fmt.Println("Test Debug")
 
 		// Generate request ID
 		requestID := generateRequestID()
@@ -137,6 +138,10 @@ func NewAuditInterceptor(cfg *InterceptorConfig) grpc.UnaryServerInterceptor {
 		// Call the handler
 		startTime := time.Now()
 		resp, err := handler(ctx, req)
+		if err != nil {
+			return resp, err
+		}
+
 		duration := time.Since(startTime)
 
 		// Capture response data
