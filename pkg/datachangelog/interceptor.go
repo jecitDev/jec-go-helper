@@ -279,8 +279,11 @@ func inferOperation(methodName string) string {
 	if strings.Contains(lower, "create") || strings.Contains(lower, "add") || strings.Contains(lower, "insert") {
 		return "CREATE"
 	}
-	if strings.Contains(lower, "delete") || strings.Contains(lower, "remove") || strings.Contains(lower, "void") {
+	if strings.Contains(lower, "delete") || strings.Contains(lower, "remove") {
 		return "DELETE"
+	}
+	if strings.Contains(lower, "void") {
+		return "VOID"
 	}
 	if strings.Contains(lower, "patch") {
 		return "PATCH"
