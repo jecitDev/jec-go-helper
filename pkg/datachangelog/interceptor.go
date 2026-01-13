@@ -276,10 +276,10 @@ func shouldLogMethod(cfg *InterceptorConfig, domain, methodName string) bool {
 func inferOperation(methodName string) string {
 	lower := strings.ToLower(methodName)
 
-	if strings.Contains(lower, "create") || strings.Contains(lower, "add") {
+	if strings.Contains(lower, "create") || strings.Contains(lower, "add") || strings.Contains(lower, "insert") {
 		return "CREATE"
 	}
-	if strings.Contains(lower, "delete") || strings.Contains(lower, "remove") {
+	if strings.Contains(lower, "delete") || strings.Contains(lower, "remove") || strings.Contains(lower, "void") {
 		return "DELETE"
 	}
 	if strings.Contains(lower, "patch") {
