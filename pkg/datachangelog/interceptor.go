@@ -117,7 +117,6 @@ func NewAuditInterceptor(cfg *InterceptorConfig) grpc.UnaryServerInterceptor {
 		if !shouldLogMethod(cfg, domain, methodName) {
 			return handler(ctx, req)
 		}
-		fmt.Println("Test Debug")
 
 		// Generate request ID
 		requestID := generateRequestID()

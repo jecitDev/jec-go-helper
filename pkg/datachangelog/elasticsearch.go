@@ -589,7 +589,7 @@ func (r *ElasticsearchRepository) Health(ctx context.Context) error {
 // generateIndexName generates the Elasticsearch index name based on domain and timestamp
 func (r *ElasticsearchRepository) generateIndexName(domain string, timestamp time.Time) string {
 	// Format: audit-log-{domain}-yyyy.MM
-	return fmt.Sprintf("%s-%s-%04d.%02d", r.indexName, domain, timestamp.Year(), timestamp.Month())
+	return fmt.Sprintf("%s-%04d.%02d", domain, timestamp.Year(), timestamp.Month())
 }
 
 // buildQuery constructs an Elasticsearch query from ChangeLogQuery parameters
