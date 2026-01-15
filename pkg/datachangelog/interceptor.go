@@ -137,6 +137,10 @@ func NewAuditInterceptor(cfg *InterceptorConfig) grpc.UnaryServerInterceptor {
 		// Call the handler
 		startTime := time.Now()
 		resp, err := handler(ctx, req)
+		if err != nil {
+			return resp, err
+		}
+
 		duration := time.Since(startTime)
 
 		// Capture response data

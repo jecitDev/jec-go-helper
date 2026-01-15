@@ -147,7 +147,6 @@ func loadAndProcessConfigYAML(configFilePath string) ([]byte, error) {
 		configStr = replaceEnvVariable(configStr, "ELASTIC_URL")
 		configStr = replaceEnvVariable(configStr, "ELASTIC_USER")
 		configStr = replaceEnvVariable(configStr, "ELASTIC_PASSWORD")
-		configStr = replaceEnvVariable(configStr, "ELASTIC_INDEX_LOG")
 
 		// Stop if no more replacements
 		if configStr == before {
