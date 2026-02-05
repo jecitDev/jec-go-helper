@@ -119,6 +119,30 @@ func GrpcErrorHandler() grpc.UnaryServerInterceptor {
 				case "timeperiod":
 					message = append(message, fmt.Sprintf("validation_request|required|%s",
 						err.Field()))
+				case "http_url":
+					message = append(message, fmt.Sprintf("validation_request|not_html_url|%s",
+						err.Field()))
+				case "latitude":
+					message = append(message, fmt.Sprintf("validation_request|not_latitude|%s",
+						err.Field()))
+				case "longitude":
+					message = append(message, fmt.Sprintf("validation_request|not_longitude|%s",
+						err.Field()))
+				case "e164":
+					message = append(message, fmt.Sprintf("validation_request|not_e164_formatted_phone_number|%s",
+						err.Field()))
+				case "hexcolor":
+					message = append(message, fmt.Sprintf("validation_request|not_hex_color|%s",
+						err.Field()))
+				case "min":
+					message = append(message, fmt.Sprintf("validation_request|min|%s|%s",
+						err.Field(), err.Param()))
+				case "max":
+					message = append(message, fmt.Sprintf("validation_request|max|%s|%s",
+						err.Field(), err.Param()))
+				case "iso4217":
+					message = append(message, fmt.Sprintf("validation_request|not_currency_code|%s",
+						err.Field()))
 				}
 			}
 		}
