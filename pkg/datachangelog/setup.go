@@ -13,7 +13,11 @@ import (
 // SetupAuditInfrastructure initializes the complete audit logging infrastructure
 // It:
 // 1. Loads and parses the datachangelog configuration from YAML
-// 2. Creates the Elasticsearch repository with proper connection pooling
+// 2. Creates the storage repository:
+//   - Elasticsearch only        (elasticsearch.enabled: true)
+//   - ClickHouse only           (clickhouse.enabled: true)
+//   - Both (dual-write)         (both enabled; ES stays the source of truth for reads)
+//
 // 3. Initializes sanitizers and diff calculators
 // 4. Returns the gRPC unary interceptor for audit logging
 //
@@ -44,58 +48,92 @@ func SetupAuditInfrastructure(configFilePath string) (grpc.UnaryServerIntercepto
 		return nil, fmt.Errorf("failed to parse audit config: %w", err)
 	}
 
-	// 3. Check if Elasticsearch is enabled
-	if !auditConfig.Elasticsearch.Enabled {
-		fmt.Println("[AUDIT] Elasticsearch audit logging is disabled in configuration")
+	// 3. Check which storage backends are enabled
+	esEnabled := auditConfig.Elasticsearch.Enabled
+	chEnabled := auditConfig.ClickHouse.Enabled
+
+	if !esEnabled && !chEnabled {
+		fmt.Println("[AUDIT] Audit logging (Elasticsearch/ClickHouse) is disabled in configuration")
 		return createNoOpInterceptor(), nil
 	}
 
-	// Validate that addresses are available
-	if len(auditConfig.Elasticsearch.Addresses) == 0 {
-		fmt.Println("[AUDIT] Warning: No Elasticsearch addresses configured, using mock repository")
-		return createAuditInterceptorWithMock(), nil
+	var repo Repository
+
+	// 4. Elasticsearch repository (existing logic, unchanged)
+	if esEnabled {
+		// Validate that addresses are available
+		if len(auditConfig.Elasticsearch.Addresses) == 0 {
+			fmt.Println("[AUDIT] Warning: No Elasticsearch addresses configured")
+			if !chEnabled {
+				fmt.Println("[AUDIT] Using mock repository")
+				return createAuditInterceptorWithMock(), nil
+			}
+			fmt.Println("[AUDIT] Skipping Elasticsearch, ClickHouse is enabled")
+		} else {
+			esRepo, err := NewElasticsearchRepository(&auditConfig.Elasticsearch)
+			if err != nil {
+				// Check if it's an authorization error - if so, still use the repo
+				// because the user might have index-specific permissions even without cluster monitor
+				if strings.Contains(err.Error(), "security_exception") || strings.Contains(err.Error(), "unauthorized") {
+					fmt.Printf("[AUDIT] ⚠ Authorization warning: %v\n", err)
+					fmt.Println("[AUDIT] User may not have cluster monitor privilege, but continuing with Elasticsearch repository...")
+					fmt.Println("[AUDIT] ℹ To fix: Grant 'monitor' cluster privilege to jecis-log-user role")
+					repo = esRepo
+				} else {
+					fmt.Printf("[AUDIT] Warning: Failed to create elasticsearch repository: %v\n", err)
+					fmt.Println("[AUDIT] Continuing with fallback to mock repository...")
+					repo = NewMockElasticsearchRepository()
+				}
+			} else {
+				// Verify Elasticsearch connectivity
+				healthCtx, healthCancel := context.WithTimeout(context.Background(), 5*time.Second)
+				healthErr := esRepo.Health(healthCtx)
+				healthCancel()
+
+				if healthErr != nil {
+					// Check if it's a permission error
+					if strings.Contains(healthErr.Error(), "security_exception") || strings.Contains(healthErr.Error(), "unauthorized") || strings.Contains(healthErr.Error(), "403") {
+						fmt.Printf("[AUDIT] ⚠ Authorization warning: %v\n", healthErr)
+						fmt.Println("[AUDIT] User does not have cluster monitor privilege")
+						fmt.Println("[AUDIT] ✓ Continuing with Elasticsearch repository (index operations should work)")
+						fmt.Println("[AUDIT] ℹ To fix permanently: Grant 'monitor' cluster privilege to jecis-log-user role in Elasticsearch")
+						repo = esRepo
+					} else {
+						fmt.Printf("[AUDIT] Warning: Elasticsearch health check failed: %v\n", healthErr)
+						fmt.Println("[AUDIT] Continuing with fallback to mock repository...")
+						esRepo.Close()
+						repo = NewMockElasticsearchRepository()
+					}
+				} else {
+					fmt.Printf("[AUDIT] ✓ Elasticsearch connection successful\n")
+					repo = esRepo
+				}
+			}
+		}
 	}
 
-	// 4. Create Elasticsearch repository
-	var repo Repository
-	esRepo, err := NewElasticsearchRepository(&auditConfig.Elasticsearch)
-	if err != nil {
-		// Check if it's an authorization error - if so, still use the repo
-		// because the user might have index-specific permissions even without cluster monitor
-		if strings.Contains(err.Error(), "security_exception") || strings.Contains(err.Error(), "unauthorized") {
-			fmt.Printf("[AUDIT] ⚠ Authorization warning: %v\n", err)
-			fmt.Println("[AUDIT] User may not have cluster monitor privilege, but continuing with Elasticsearch repository...")
-			fmt.Println("[AUDIT] ℹ To fix: Grant 'monitor' cluster privilege to jecis-log-user role")
-			repo = esRepo
-		} else {
-			fmt.Printf("[AUDIT] Warning: Failed to create elasticsearch repository: %v\n", err)
-			fmt.Println("[AUDIT] Continuing with fallback to mock repository...")
-			repo = NewMockElasticsearchRepository()
+	// 5. ClickHouse repository
+	//    - ES + ClickHouse enabled -> dual-write (ES primary for reads, ClickHouse secondary)
+	//    - ClickHouse only         -> ClickHouse is the only storage
+	//    A ClickHouse failure never stops the app: it is logged and audit continues without it.
+	if chEnabled {
+		chRepo, chErr := NewClickHouseRepository(&auditConfig.ClickHouse)
+		switch {
+		case chErr != nil:
+			fmt.Printf("[AUDIT] Warning: Failed to create clickhouse repository: %v\n", chErr)
+		case repo == nil:
+			fmt.Println("[AUDIT] ✓ ClickHouse connection successful (ClickHouse only)")
+			repo = chRepo
+		default:
+			fmt.Println("[AUDIT] ✓ ClickHouse connection successful (dual-write with Elasticsearch)")
+			repo = &DualWriteRepository{Primary: repo, Secondary: chRepo}
 		}
-	} else {
-		// 5. Verify Elasticsearch connectivity
-		healthCtx, healthCancel := context.WithTimeout(context.Background(), 5*time.Second)
-		healthErr := esRepo.Health(healthCtx)
-		healthCancel()
+	}
 
-		if healthErr != nil {
-			// Check if it's a permission error
-			if strings.Contains(healthErr.Error(), "security_exception") || strings.Contains(healthErr.Error(), "unauthorized") || strings.Contains(healthErr.Error(), "403") {
-				fmt.Printf("[AUDIT] ⚠ Authorization warning: %v\n", healthErr)
-				fmt.Println("[AUDIT] User does not have cluster monitor privilege")
-				fmt.Println("[AUDIT] ✓ Continuing with Elasticsearch repository (index operations should work)")
-				fmt.Println("[AUDIT] ℹ To fix permanently: Grant 'monitor' cluster privilege to jecis-log-user role in Elasticsearch")
-				repo = esRepo
-			} else {
-				fmt.Printf("[AUDIT] Warning: Elasticsearch health check failed: %v\n", healthErr)
-				fmt.Println("[AUDIT] Continuing with fallback to mock repository...")
-				esRepo.Close()
-				repo = NewMockElasticsearchRepository()
-			}
-		} else {
-			fmt.Printf("[AUDIT] ✓ Elasticsearch connection successful\n")
-			repo = esRepo
-		}
+	// No usable storage at all -> fallback to mock, same behavior as before
+	if repo == nil {
+		fmt.Println("[AUDIT] Warning: No audit storage available, falling back to mock repository")
+		repo = NewMockElasticsearchRepository()
 	}
 
 	// 6. Initialize sanitizer with merged sensitive fields
@@ -107,7 +145,7 @@ func SetupAuditInfrastructure(configFilePath string) (grpc.UnaryServerIntercepto
 
 	// 8. Create and return the interceptor
 	interceptorCfg := &InterceptorConfig{
-		Enabled:           auditConfig.Elasticsearch.Enabled,
+		Enabled:           esEnabled || chEnabled,
 		Config:            auditConfig,
 		Repository:        repo,
 		Sanitizer:         sanitizer,
@@ -137,7 +175,7 @@ func loadAndProcessConfigYAML(configFilePath string) ([]byte, error) {
 	configStr := string(data)
 
 	// Replace environment variable placeholders like ${VAR_NAME}
-	// This supports patterns like "${ELASTIC_URL}", "${ELASTIC_USER}", etc.
+	// This supports patterns like "${ELASTIC_URL}", "${CLICKHOUSE_ADDR}", etc.
 	configStr = os.ExpandEnv(configStr)
 
 	// Additional manual replacement for common patterns

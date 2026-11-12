@@ -13,6 +13,7 @@ type Config struct {
 	Elasticsearch ElasticsearchConfig `yaml:"elasticsearch"`
 	Entities      []EntityConfig      `yaml:"entities"`
 	Global        GlobalConfig        `yaml:"global"`
+	ClickHouse    ClickHouseConfig    `yaml:"clickhouse"`
 }
 
 // GlobalConfig represents global settings for audit logging
@@ -58,6 +59,19 @@ type ElasticsearchConfig struct {
 	MaxRetries         int           `yaml:"max_retries"`
 	RetryDelay         time.Duration `yaml:"retry_delay"`
 	FlushInterval      time.Duration `yaml:"flush_interval"`
+	RequestTimeout     time.Duration `yaml:"request_timeout"`
+}
+
+type ClickHouseConfig struct {
+	Enabled            bool          `yaml:"enabled"`
+	Addr               string        `yaml:"addr"`
+	Database           string        `yaml:"database"`
+	Username           string        `yaml:"username"`
+	Password           string        `yaml:"password"`
+	Table              string        `yaml:"table"`
+	TLS                bool          `yaml:"tls"`
+	AsyncInsert        bool          `yaml:"async_insert"`
+	WaitForAsyncInsert bool          `yaml:"wait_for_async_insert"`
 	RequestTimeout     time.Duration `yaml:"request_timeout"`
 }
 
