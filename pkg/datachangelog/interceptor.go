@@ -73,8 +73,13 @@ func (die *DefaultIPExtractor) ExtractIP(ctx context.Context) string {
 		return ""
 	}
 
-	if values := md.Get("x-forwarded-for"); len(values) > 0 {
-		return values[0]
+	for _, key := range []string{"x-client-ip", "x-forwarded-for", "x-real-ip"} {
+		if values := md.Get(key); len(values) > 0 {
+			ip := strings.TrimSpace(strings.Split(values[0], ",")[0])
+			if ip != "" {
+				return ip
+			}
+		}
 	}
 
 	return ""
@@ -150,7 +155,7 @@ func NewAuditInterceptor(cfg *InterceptorConfig) grpc.UnaryServerInterceptor {
 		}
 
 		// Determine operation type from method name
-		operation := inferOperation(methodName)
+		operation, _ := resolveOperation(findEntityConfig(cfg.Config, domain), methodName)
 
 		// Extract primary key from request using the configured primary key fields
 		primaryKey := extractPrimaryKey(cfg, domain, methodName, req, resp)
@@ -266,14 +271,9 @@ func shouldLogMethod(cfg *InterceptorConfig, domain, methodName string) bool {
 	}
 
 	// Check if the operation (inferred from method name) is in the allowed operations list
-	operation := inferOperation(methodName)
-	for _, op := range entityCfg.Operations {
-		if op == operation {
-			return true
-		}
-	}
+	_, ok := resolveOperation(entityCfg, methodName)
 
-	return false
+	return ok
 }
 
 // inferOperation infers the operation type from the method name
@@ -476,6 +476,9 @@ func extractUserAgent(ctx context.Context) string {
 		return ""
 	}
 
+	if values := md.Get("x-client-user-agent"); len(values) > 0 && values[0] != "" {
+		return values[0]
+	}
 	if values := md.Get("user-agent"); len(values) > 0 {
 		return values[0]
 	}
