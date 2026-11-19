@@ -33,7 +33,7 @@ type InterceptorConfig struct {
 
 // UserExtractor defines how to extract user information from context
 type UserExtractor interface {
-	ExtractUser(ctx context.Context) (userID, email, role string, err error)
+	ExtractUser(ctx context.Context) (userID, email, role, businessUnitID string, err error)
 }
 
 // IPExtractor defines how to extract IP address from context
@@ -44,10 +44,10 @@ type IPExtractor interface {
 // DefaultUserExtractor implements UserExtractor
 type DefaultUserExtractor struct{}
 
-func (due *DefaultUserExtractor) ExtractUser(ctx context.Context) (userID, email, role string, err error) {
+func (due *DefaultUserExtractor) ExtractUser(ctx context.Context) (userID, email, role, businessUnitID string, err error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return "", "", "", nil
+		return "", "", "", "", nil
 	}
 
 	// Extract from metadata headers (customize based on your auth implementation)
@@ -59,6 +59,9 @@ func (due *DefaultUserExtractor) ExtractUser(ctx context.Context) (userID, email
 	}
 	if values := md.Get("user-role"); len(values) > 0 {
 		role = values[0]
+	}
+	if values := md.Get("x-business-unit-id"); len(values) > 0 {
+		businessUnitID = values[0]
 	}
 
 	return
@@ -128,7 +131,7 @@ func NewAuditInterceptor(cfg *InterceptorConfig) grpc.UnaryServerInterceptor {
 		ctx = context.WithValue(ctx, "request-id", requestID)
 
 		// Extract user information
-		userID, userEmail, _, _ := cfg.UserExtractor.ExtractUser(ctx)
+		userID, userEmail, _, businessUnitID, _ := cfg.UserExtractor.ExtractUser(ctx)
 
 		// Extract IP address
 		ipAddress := cfg.IPExtractor.ExtractIP(ctx)
@@ -176,6 +179,8 @@ func NewAuditInterceptor(cfg *InterceptorConfig) grpc.UnaryServerInterceptor {
 			beforeData = normalizePatchChangeData(reqData)
 		case "DELETE":
 			afterData = nil
+		case "REACTIVATE":
+			afterData = nil
 		}
 
 		// Create audit log entry
@@ -200,6 +205,7 @@ func NewAuditInterceptor(cfg *InterceptorConfig) grpc.UnaryServerInterceptor {
 				"method":   methodName,
 				"duration": duration.Milliseconds(),
 			},
+			BusinessUnitID: businessUnitID,
 		}
 
 		// Add error information if operation failed
@@ -294,6 +300,9 @@ func inferOperation(methodName string) string {
 	}
 	if strings.Contains(lower, "reschedule") {
 		return "RESCHEDULE"
+	}
+	if strings.Contains(lower, "reactivate") || strings.Contains(lower, "reactive") {
+		return "REACTIVATE"
 	}
 	if strings.Contains(lower, "update") || strings.Contains(lower, "modify") || strings.Contains(lower, "edit") {
 		return "UPDATE"

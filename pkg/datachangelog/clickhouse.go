@@ -116,7 +116,7 @@ func (r *ClickHouseRepository) insert(ctx context.Context, logs []DataChangeLog)
 	batch, err := r.conn.PrepareBatch(ctx, fmt.Sprintf(
 		`INSERT INTO %s (id, domain, entity, operation, primary_key, primary_key_str,
 			change_data, after_data, changed_by, changed_by_email, change_timestamp,
-			request_id, ip_address, user_agent, metadata)`, r.table))
+			request_id, ip_address, user_agent, metadata, business_unit_id)`, r.table))
 	if err != nil {
 		return fmt.Errorf("clickhouse prepare batch: %w", err)
 	}
@@ -134,6 +134,7 @@ func (r *ClickHouseRepository) insert(ctx context.Context, logs []DataChangeLog)
 			l.ChangedBy, l.ChangedByEmail, ts.UTC(),
 			l.RequestID, l.IPAddress, l.UserAgent,
 			toJSONString(l.Metadata),
+			l.BusinessUnitID,
 		); err != nil {
 			_ = batch.Abort()
 			return fmt.Errorf("clickhouse append: %w", err)
