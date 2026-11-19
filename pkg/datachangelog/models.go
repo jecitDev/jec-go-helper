@@ -23,6 +23,7 @@ type DataChangeLog struct {
 	IPAddress       string                 `json:"ip_address"`
 	UserAgent       string                 `json:"user_agent"`
 	Metadata        map[string]interface{} `json:"metadata"` // Additional custom metadata
+	BusinessUnitID  string                 `json:"business_unit_id"`
 }
 
 // FieldDiff represents a change in a single field
